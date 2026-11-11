@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>93640fa6-8654-4bb7-8b5d-0dcf07a4e591</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>CardGameBattle.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -21,7 +21,17 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="CardGameBattle.py" />
+    <Compile Include="ai_replay.py" />
+    <Compile Include="deck_builder.py" />
+    <Compile Include="demo_match.py" />
+    <Compile Include="engine.py" />
+    <Compile Include="loader.py" />
+    <Compile Include="main.py" />
+    <Compile Include="server.py" />
+    <Compile Include="test_engine.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="cards.json" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
