@@ -173,6 +173,13 @@ class TestAlgoCardEngine(unittest.TestCase):
         self.assertEqual(last["player"], "Player1")
         self.assertEqual(last["turn"], 1)
 
+    def test_game_over_logged_after_play_card(self):
+        self.engine.player2.hp = 500
+        self.go_main(hand=[make_card("GRA-01", "Graph", 1)], mana=1)
+        self.engine.play_card("GRA-01")
+        self.assertEqual(self.engine.log[-2]["action_type"], "PLAY_CARD")
+        self.assertEqual(self.engine.log[-1]["action_type"], "GAME_OVER")
+
     def test_to_dict_snapshot(self):
         snap = self.engine.to_dict()
         self.assertEqual(snap["turn"], 1)
