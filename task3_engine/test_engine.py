@@ -1,5 +1,5 @@
 import unittest
-from engine import GameEngine, MAX_MANA_CAP
+from task3_engine.engine import GameEngine, MAX_MANA_CAP
 
 
 def make_card(card_id, category, cost, name=None):
