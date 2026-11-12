@@ -1,0 +1,110 @@
+================================================================
+ KỊCH BẢN 1: 6 LƯỢT ĐẤU ĐẦU TIÊN
+================================================================
+
+--- LƯỢT 1 | Alice (StackMaster) | HP 4000 | DEF 0 | Mana 1/1 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] Stack Push (cost 1) -> Thành công triển khai [Stack Push]. Hiệu ứng: Cấu trúc LIFO kích hoạt: Tăng 300 điểm phòng thủ (DEF).
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 2 | Bob (AlgoKnight) | HP 4000 | DEF 0 | Mana 2/2 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] BFS Traversal (cost 2) -> Thành công triển khai [BFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 200.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 3 | Alice (StackMaster) | HP 3800 | DEF 0 | Mana 2/2 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] BFS Traversal (cost 2) -> Thành công triển khai [BFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 4 | Bob (AlgoKnight) | HP 3500 | DEF 0 | Mana 3/3 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] DFS Traversal (cost 3) -> Thành công triển khai [DFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 5 | Alice (StackMaster) | HP 3300 | DEF 0 | Mana 3/3 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] DFS Traversal (cost 3) -> Thành công triển khai [DFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 6 | Bob (AlgoKnight) | HP 3000 | DEF 0 | Mana 4/4 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] Activity Selector (cost 2) -> Thành công triển khai [Activity Selector]. Hiệu ứng: Thuật toán tham lam: Đánh cắp 0 Mana từ đối thủ.
+     [ĐÁNH THẺ] Stack Pop (cost 2) -> Thành công triển khai [Stack Pop]. Hiệu ứng: Cấu trúc LIFO kích hoạt: Tăng 300 điểm phòng thủ (DEF).
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+----------------------------------------------------------------
+KẾT QUẢ: Alice (StackMaster) HP 3300 | Bob (AlgoKnight) HP 3000
+Trận chưa kết thúc sau số lượt mô phỏng.
+Tổng số dòng log: 43
+
+================================================================
+ KỊCH BẢN 2: ĐIỀU KIỆN THẮNG (HP Bob = 800)
+================================================================
+
+--- LƯỢT 1 | Alice (StackMaster) | HP 4000 | DEF 0 | Mana 1/1 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] Stack Push (cost 1) -> Thành công triển khai [Stack Push]. Hiệu ứng: Cấu trúc LIFO kích hoạt: Tăng 300 điểm phòng thủ (DEF).
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 2 | Bob (AlgoKnight) | HP 800 | DEF 0 | Mana 2/2 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] BFS Traversal (cost 2) -> Thành công triển khai [BFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 200.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 3 | Alice (StackMaster) | HP 3800 | DEF 0 | Mana 2/2 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] BFS Traversal (cost 2) -> Thành công triển khai [BFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 4 | Bob (AlgoKnight) | HP 300 | DEF 0 | Mana 3/3 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] DFS Traversal (cost 3) -> Thành công triển khai [DFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.
+  -> Chuyển sang phase: BATTLE PHASE
+  -> Chuyển sang phase: END PHASE
+  -> Chuyển sang phase: DRAW PHASE
+
+--- LƯỢT 5 | Alice (StackMaster) | HP 3300 | DEF 0 | Mana 3/3 ---
+  -> Chuyển sang phase: STANDBY PHASE
+  -> Chuyển sang phase: MAIN PHASE
+     [ĐÁNH THẺ] DFS Traversal (cost 3) -> Thành công triển khai [DFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.
+
+----------------------------------------------------------------
+KẾT QUẢ: Alice (StackMaster) HP 3300 | Bob (AlgoKnight) HP 0
+[CHIẾN THẮNG] Alice (StackMaster)
+Tổng số dòng log: 32
+
+Log JSON lượt cuối kịch bản 2 (5 dòng):
+  {'turn': 5, 'phase': 'DRAW PHASE', 'player': 'Alice (StackMaster)', 'action_type': 'PHASE', 'details': 'Chuyển sang phase: DRAW PHASE'}
+  {'turn': 5, 'phase': 'STANDBY PHASE', 'player': 'Alice (StackMaster)', 'action_type': 'PHASE', 'details': 'Chuyển sang phase: STANDBY PHASE'}
+  {'turn': 5, 'phase': 'MAIN PHASE', 'player': 'Alice (StackMaster)', 'action_type': 'PHASE', 'details': 'Chuyển sang phase: MAIN PHASE'}
+  {'turn': 5, 'phase': 'MAIN PHASE', 'player': 'Alice (StackMaster)', 'action_type': 'PLAY_CARD', 'details': 'Thành công triển khai [DFS Traversal]. Hiệu ứng: Duyệt đồ thị (BFS/DFS): Gây 500 sát thương, HP đối thủ mất 500.'}
+  {'turn': 5, 'phase': 'MAIN PHASE', 'player': 'Alice (StackMaster)', 'action_type': 'GAME_OVER', 'details': 'Alice (StackMaster) thắng (HP đối thủ về 0).'}
