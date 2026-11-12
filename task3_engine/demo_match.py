@@ -1,4 +1,4 @@
-from engine import GameEngine
+from task3_engine.engine import GameEngine
 
 def run_simulation():
     deck_p1 = [
