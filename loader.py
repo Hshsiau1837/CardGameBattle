@@ -14,9 +14,20 @@ class CardLoader:
     def load_and_validate(self):
         if not os.path.exists(IMAGE_DIR):
             os.makedirs(IMAGE_DIR)
+            
+        # 1. Ưu tiên đọc trực tiếp từ file cards.json cục bộ trước
+        if os.path.exists(self.filepath):
+            try:
+                with open(self.filepath, "r", encoding="utf-8") as f:
+                    self.cards = json.load(f)
+                print(f"[SUCCESS] Đã nạp thành công {len(self.cards)} thẻ bài từ file local!")
+                return self.cards
+            except Exception as e:
+                print(f"[WARNING] Lỗi đọc file local: {e}")
 
+        # 2. Nếu chưa có file local thì mới gọi API từ web (fallback)
         try:
-            print("[INFO] Đang kết nối tới YGOPRODeck API để lấy toàn bộ dữ liệu thẻ bài...")
+            print("[INFO] Đang kết nối tới YGOPRODeck API...")
             req = urllib.request.Request(YGOPRO_API_URL, headers={'User-Agent': 'Mozilla/5.0'})
             with urllib.request.urlopen(req, timeout=10) as response:
                 data = json.loads(response.read().decode("utf-8"))
@@ -43,13 +54,9 @@ class CardLoader:
                 with open(self.filepath, "w", encoding="utf-8") as f:
                     json.dump(self.cards, f, ensure_ascii=False, indent=2)
                     
-                print(f"[SUCCESS] Đã nạp thành công {len(self.cards)} thẻ bài!")
+                print(f"[SUCCESS] Đã nạp thành công {len(self.cards)} thẻ bài từ API!")
                 return self.cards
 
         except Exception as e:
-            print(f"[WARNING] Lỗi kết nối API ({e}), đang đọc từ cache local...")
-            if os.path.exists(self.filepath):
-                with open(self.filepath, "r", encoding="utf-8") as f:
-                    self.cards = json.load(f)
-                return self.cards
+            print(f"[ERROR] Không thể tải dữ liệu thẻ bài: {e}")
             return []
