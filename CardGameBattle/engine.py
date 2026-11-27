@@ -29,7 +29,7 @@ class GameEngine:
         self.game_over = False
         self.winner = None
         
-        # Khởi tạo tay bài ban đầu (mỗi người 4 lá)
+        # Rút 4 lá khởi đầu cho mỗi bên
         for _ in range(4):
             self.player1.draw_card()
             self.player2.draw_card()
@@ -40,72 +40,78 @@ class GameEngine:
 
     def next_phase(self):
         if self.game_over:
-            return "Trận đấu đã kết thúc!"
+            return f"Trận đấu đã kết thúc! Người thắng: {self.winner}"
         
         self.phase_idx += 1
         if self.phase_idx >= len(self.PHASES):
             self.phase_idx = 0
             self.switch_turn()
             
-        return f"Chuyển sang phase: {self.current_phase}"
+        return f"Chuyển sang {self.current_phase} (Lượt {self.turn_count} - {self.current_turn_player.username})"
 
     def switch_turn(self):
-        # Đổi lượt chơi
         self.current_turn_player, self.opponent_player = self.opponent_player, self.current_turn_player
         self.turn_count += 1
         
-        # Hồi phục và tăng Mana tối đa (giới hạn tối đa 10)
+        # Hồi mana và tăng giới hạn mana (tối đa 10)
         self.current_turn_player.max_mana = min(10, self.current_turn_player.max_mana + 1)
         self.current_turn_player.mana = self.current_turn_player.max_mana
         
         # Rút bài đầu lượt
-        self.current_turn_player.draw_card()
+        drawn = self.current_turn_player.draw_card()
+        return drawn
 
     def play_card(self, card_id):
+        if self.game_over:
+            return False, "Trận đấu đã kết thúc!"
         if self.current_phase != "MAIN PHASE":
-            return False, "Chỉ được triển khai thẻ bài trong MAIN PHASE!"
+            return False, "Chỉ được đánh thẻ bài trong MAIN PHASE!"
         
-        # Tìm thẻ trên tay
         target_card = None
         for c in self.current_turn_player.hand:
-            if c["id"] == card_id:
+            if str(c["id"]) == str(card_id):
                 target_card = c
                 break
                 
         if not target_card:
-            return False, "Thẻ bài không tồn tại trên tay!"
+            return False, "Thẻ bài không có trên tay!"
             
         cost = target_card.get("cost", 0)
         if self.current_turn_player.mana < cost:
-            return False, f"Không đủ Mana! Cần {cost} Mana nhưng chỉ còn {self.current_turn_player.mana}."
+            return False, f"Không đủ Mana! Cần {cost} Mana (Hiện có: {self.current_turn_player.mana})."
             
-        # Trừ Mana, dịch chuyển thẻ từ Hand sang Field
+        # Trừ mana và chuyển bài ra sân
         self.current_turn_player.mana -= cost
         self.current_turn_player.hand.remove(target_card)
         self.current_turn_player.field.append(target_card)
         
-        # Áp dụng hiệu ứng thuật toán
-        effect_result = self.apply_algorithm_effect(target_card)
-        return True, f"Thành công triển khai [{target_card['name']}]. Hiệu ứng: {effect_result}"
+        # Áp dụng hiệu ứng bài
+        effect_msg = self.apply_algorithm_effect(target_card)
+        return True, f"Triển khai [{target_card['name']}]. {effect_msg}"
 
     def apply_algorithm_effect(self, card):
-        category = card.get("category")
+        category = card.get("category", "")
+        
         if category == "Stack":
-            return "Cấu trúc LIFO kích hoạt: Tăng 300 điểm phòng thủ (DEF)."
+            return "Cấu trúc LIFO: Tăng 300 điểm giáp/phòng thủ."
         elif category == "Queue":
-            return "Hàng đợi FIFO kích hoạt: Rút thêm 1 thẻ phụ trợ."
+            drawn = self.current_turn_player.draw_card()
+            name = drawn['name'] if drawn else 'Hết bài'
+            return f"Hàng đợi FIFO: Rút thêm 1 lá ({name})."
         elif category == "Graph":
-            return "Duyệt đồ thị (BFS/DFS): Gây 500 sát thương trực tiếp vào HP đối thủ."
             self.opponent_player.hp -= 500
             self.check_win_condition()
+            return "Duyệt đồ thị (BFS/DFS): Gây 500 sát thương trực tiếp vào LP đối thủ!"
         elif category == "Greedy":
-            return "Thuật toán tham lam: Đánh cắp 1 Mana từ đối thủ."
-            self.opponent_player.mana = max(0, self.opponent_player.mana - 1)
-            self.current_turn_player.mana += 1
+            stolen = min(1, self.opponent_player.mana)
+            self.opponent_player.mana -= stolen
+            self.current_turn_player.mana += stolen
+            return f"Thuật toán tham lam: Đánh cắp {stolen} Mana của đối thủ!"
         elif category == "DP":
-            return "Lập trình động (Memoization): Hoàn trả lại 1 Mana chi phí."
             self.current_turn_player.mana += 1
-        return "Hiệu ứng thẻ bài đã được ghi nhận trên bàn đấu."
+            return "Lập trình động (Memoization): Hoàn lại 1 Mana chi phí."
+            
+        return "Thẻ bài đã ra sân."
 
     def check_win_condition(self):
         if self.player1.hp <= 0:

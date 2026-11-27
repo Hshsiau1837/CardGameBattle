@@ -1,0 +1,18 @@
+import js
+import asyncio
+
+async def login_to_server(username, password):
+    try:
+        # Gọi API FastAPI qua JS fetch chạy trên trình duyệt
+        response = await js.window.fetch("http://localhost:8000/api/login", {
+            "method": "POST",
+            "headers": {"Content-Type": "application/json"},
+            "body": js.JSON.stringify({"username": username, "password": password})
+        })
+        data = await response.json()
+        # Chuyển đổi dữ liệu JS về dictionary Python nếu cần
+        print("Đăng nhập thành công:", data)
+        return True
+    except Exception as e:
+        print("Lỗi kết nối server:", e)
+        return False

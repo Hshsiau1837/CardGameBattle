@@ -1,12 +1,11 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import sqlite3
 import json
 
-app = FastAPI(title="AlgoCards Cloud Sync API")
+app = FastAPI(title="AlgoCards API Backend")
 
-# Cấu hình CORS cho phép client web gọi API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,14 +15,14 @@ app.add_middleware(
 )
 
 def init_db():
-    conn = sqlite3.connect("game.db")
+    conn = sqlite3.connect("game_progress.db")
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL,
-            wins INT DEFAULT 0,
-            unlocked_cards TEXT DEFAULT '["STK-01", "QUE-01", "GRA-01"]'
+            deck_data TEXT DEFAULT '[]',
+            unlocked_cards TEXT DEFAULT '["46986414", "89631139", "STK-01", "GRA-01", "QUE-01", "DP-01"]'
         )
     """)
     conn.commit()
@@ -31,57 +30,66 @@ def init_db():
 
 init_db()
 
-class UserAuthSchema(BaseModel):
+class UserAuth(BaseModel):
     username: str
     password: str
 
-class ProgressSchema(BaseModel):
+class ProgressSync(BaseModel):
     username: str
-    wins: int
-    unlocked_cards: list
+    deck_data: str
+    unlocked_cards: str
 
 @app.post("/api/register")
-def register(user: UserAuthSchema):
-    conn = sqlite3.connect("game.db")
+def register(data: UserAuth):
+    conn = sqlite3.connect("game_progress.db")
     cursor = conn.cursor()
-    try:
-        default_cards = json.dumps(["STK-01", "QUE-01", "GRA-01"])
-        cursor.execute("INSERT INTO users (username, password, unlocked_cards) VALUES (?, ?, ?)", 
-                       (user.username, user.password, default_cards))
-        conn.commit()
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=400, detail="Tài khoản đã tồn tại!")
-    finally:
+    cursor.execute("SELECT username FROM users WHERE username = ?", (data.username,))
+    if cursor.fetchone():
         conn.close()
-    return {"status": "success", "message": "Đăng ký tài khoản thành công!"}
+        return {"status": "error", "message": "Tai khoan da ton tai!"}
 
-@app.post("/api/login")
-def login(user: UserAuthSchema):
-    conn = sqlite3.connect("game.db")
-    cursor = conn.cursor()
-    cursor.execute("SELECT wins, unlocked_cards FROM users WHERE username = ? AND password = ?", 
-                   (user.username, user.password))
-    row = cursor.fetchone()
-    conn.close()
-    if not row:
-        raise HTTPException(status_code=401, detail="Sai tên đăng nhập hoặc mật khẩu!")
-    
-    return {
-        "status": "success",
-        "username": user.username,
-        "wins": row[0],
-        "unlocked_cards": json.loads(row[1])
-    }
-
-@app.post("/api/progress/save")
-def save_progress(prog: ProgressSchema):
-    conn = sqlite3.connect("game.db")
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET wins = ?, unlocked_cards = ? WHERE username = ?",
-                   (prog.wins, json.dumps(prog.unlocked_cards), prog.username))
+    cursor.execute(
+        "INSERT INTO users (username, password, deck_data, unlocked_cards) VALUES (?, ?, ?, ?)",
+        (data.username, data.password, "[]", "[]")
+    )
     conn.commit()
     conn.close()
-    return {"status": "success", "message": "Đã lưu tiến độ thành công lên Cloud!"}
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to AlgoCards API Server is running!"}
+    return {"status": "success", "message": "Dang ky thanh cong! Hay dang nhap."}
+
+@app.post("/api/login")
+def login(data: UserAuth):
+    conn = sqlite3.connect("game_progress.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT deck_data, unlocked_cards FROM users WHERE username = ? AND password = ?", (data.username, data.password))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        return {"status": "error", "message": "Sai tài khoản hoặc mật khẩu!"}
+    
+    try:
+        saved_deck = json.loads(row[0]) if row[0].startswith('[') else eval(row[0])
+        saved_cards = json.loads(row[1]) if row[1].startswith('[') else eval(row[1])
+    except Exception:
+        saved_deck, saved_cards = [], []
+
+    return {
+        "status": "success", 
+        "message": "Đăng nhập thành công!", 
+        "deck_data": saved_deck, 
+        "unlocked_cards": saved_cards
+    }
+
+@app.post("/api/sync")
+def sync_progress(data: ProgressSync):
+    conn = sqlite3.connect("game_progress.db")
+    cursor = conn.cursor()
+    cursor.execute("UPDATE users SET deck_data = ?, unlocked_cards = ? WHERE username = ?",
+                   (data.deck_data, data.unlocked_cards, data.username))
+    conn.commit()
+    conn.close()
+    return {"status": "success", "message": "Đã đồng bộ bộ bài lên Server thành công!"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)

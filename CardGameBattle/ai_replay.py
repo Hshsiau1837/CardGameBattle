@@ -36,6 +36,5 @@ class HeuristicAI:
         if not playable_cards:
             return None
         
-        # Chọn thẻ có cost cao nhất để đánh
         best_card = max(playable_cards, key=lambda x: x.get("cost", 0))
         return best_card
