@@ -4,6 +4,7 @@ import sys
 import os
 import urllib.request
 from loader import CardLoader
+from deck_builder import DeckBuilder
 from ai_replay import ReplayRecorder
 
 # Khởi tạo Pygame
@@ -13,7 +14,7 @@ SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("AlgoCards: EDOPro Precise Deck Builder")
 
 # --- BẢNG MÀU EDOPro THEME ---
-COLOR_BG = (15, 15, 20)           
+COLOR_BG = (15, 15, 20)          
 COLOR_PANEL = (55, 12, 12)        
 COLOR_PANEL_HOVER = (85, 18, 18)  
 COLOR_BORDER = (200, 150, 50)     
@@ -31,18 +32,21 @@ FONT_TITLE = pygame.font.SysFont("Segoe UI", 22, bold=True)
 class GameState:
     MENU = "MENU"
     DECK_BUILDER = "DECK_BUILDER"
+    BALANCE = "BALANCE"
     BATTLE = "BATTLE"
 
 current_state = GameState.MENU
 
-# Load dữ liệu thẻ từ YGOPRODeck API
+# Load dữ liệu thẻ từ file local hoặc API
 card_loader = CardLoader()
 try:
     ALL_CARDS = card_loader.load_and_validate()
 except Exception:
     ALL_CARDS = []
 
-user_main_deck = []
+# Khởi tạo DeckBuilder quản lý luật bộ bài
+deck_manager = DeckBuilder(ALL_CARDS)
+user_main_deck = deck_manager.user_deck
 user_extra_deck = []
 user_side_deck = []
 
@@ -50,11 +54,17 @@ selected_card = ALL_CARDS[0] if ALL_CARDS else None
 recorder = ReplayRecorder()
 image_cache = {}
 
-# Trạng thái tìm kiếm & kéo thả
+# Trạng thái tìm kiếm, kéo thả & cuộn, sắp xếp bảng cân bằng
 search_query = ""
 search_active = False
 dragging_card = None
 scroll_offset = 0
+balance_scroll_offset = 0
+
+# Trạng thái sắp xếp bảng cân bằng
+current_sort_column = 'id'
+sort_ascending = True
+balance_header_rects = []
 
 def get_card_image(card):
     if not card or not card.get('image_url'):
@@ -93,22 +103,23 @@ def render_menu():
     draw_honeycomb_bg()
     center_x, center_y = WIDTH // 2, HEIGHT // 2 - 20
     
-    points = [(center_x, center_y - 120), (center_x - 140, center_y + 80), (center_x + 140, center_y + 80)]
+    points = [(center_x, center_y - 140), (center_x - 150, center_y + 80), (center_x + 150, center_y + 80)]
     pygame.draw.polygon(SCREEN, (35, 10, 10), points)
     pygame.draw.polygon(SCREEN, COLOR_BORDER, points, 3)
 
     title = FONT_TITLE.render("ALGO CARDS: EDOPro DECK SYSTEM", True, COLOR_ACCENT)
-    SCREEN.blit(title, (center_x - title.get_width() // 2, center_y - 85))
+    SCREEN.blit(title, (center_x - title.get_width() // 2, center_y - 105))
 
     menu_items = [
         ("Deck Builder", GameState.DECK_BUILDER),
+        ("Balance Table", GameState.BALANCE),
         ("Online Duel (VS AI)", GameState.BATTLE),
         ("Exit Game", "EXIT")
     ]
 
-    start_y = center_y - 20
+    start_y = center_y - 40
     for idx, (text, action) in enumerate(menu_items):
-        rect = pygame.Rect(center_x - 130, start_y + idx * 50, 260, 40)
+        rect = pygame.Rect(center_x - 130, start_y + idx * 48, 260, 38)
         is_hover = rect.collidepoint(pygame.mouse.get_pos())
         
         color = COLOR_PANEL_HOVER if is_hover else COLOR_PANEL
@@ -117,6 +128,83 @@ def render_menu():
         
         txt_surf = FONT_BOLD.render(text, True, COLOR_TEXT)
         SCREEN.blit(txt_surf, (rect.x + rect.width // 2 - txt_surf.get_width() // 2, rect.y + 10))
+
+def render_balance_table():
+    draw_honeycomb_bg()
+    global balance_scroll_offset, balance_header_rects
+    balance_header_rects = []
+    
+    panel = pygame.Rect(WIDTH // 2 - 400, 30, 800, HEIGHT - 60)
+    pygame.draw.rect(SCREEN, COLOR_PANEL, panel, border_radius=8)
+    pygame.draw.rect(SCREEN, COLOR_BORDER, panel, 2, border_radius=8)
+
+    title = FONT_TITLE.render("BẢNG CÂN BẰNG HỆ THỐNG THẺ BÀI", True, COLOR_ACCENT)
+    SCREEN.blit(title, (panel.x + panel.width // 2 - title.get_width() // 2, panel.y + 15))
+
+    total_cards = len(ALL_CARDS)
+    avg_cost = sum(c.get('cost', 0) for c in ALL_CARDS) / total_cards if total_cards > 0 else 0
+    avg_atk = sum(c.get('ATK', 0) for c in ALL_CARDS) / total_cards if total_cards > 0 else 0
+    avg_def = sum(c.get('DEF', 0) for c in ALL_CARDS) / total_cards if total_cards > 0 else 0
+    
+    max_atk_card = max(ALL_CARDS, key=lambda x: x.get('ATK', 0)) if ALL_CARDS else None
+    min_cost_card = min(ALL_CARDS, key=lambda x: x.get('cost', 0)) if ALL_CARDS else None
+
+    stats_y = panel.y + 50
+    lines = [
+        f"• Tổng số lượng: {total_cards} thẻ  |  Cost TB: {avg_cost:.2f}  |  ATK TB: {avg_atk:.1f}  |  DEF TB: {avg_def:.1f}",
+        f"• Thẻ ATK cao nhất: {max_atk_card['name'] if max_atk_card else 'N/A'} ({max_atk_card.get('ATK', 0)} ATK)  |  Thẻ Cost thấp nhất: {min_cost_card['name'] if min_cost_card else 'N/A'} (Cost {min_cost_card.get('cost', 0)})",
+    ]
+    for line in lines:
+        txt = FONT.render(line, True, COLOR_TEXT)
+        SCREEN.blit(txt, (panel.x + 30, stats_y))
+        stats_y += 22
+
+    table_rect = pygame.Rect(panel.x + 25, stats_y + 10, panel.width - 50, panel.bottom - stats_y - 65)
+    
+    SCREEN.set_clip(table_rect)
+    
+    headers = [
+        ("Tên Thẻ Bài", 20, 280, 'name'), 
+        ("Loại (Category)", 300, 170, 'category'), 
+        ("Cost", 480, 70, 'cost'), 
+        ("ATK", 560, 70, 'ATK'), 
+        ("DEF", 640, 70, 'DEF')
+    ]
+    hy = table_rect.y + 10
+    
+    pygame.draw.rect(SCREEN, (30, 20, 25), pygame.Rect(table_rect.x, table_rect.y, table_rect.width, 30), border_radius=4)
+    
+    for h_text, h_offset, h_width, key in headers:
+        col_rect = pygame.Rect(table_rect.x + h_offset, table_rect.y, h_width, 30)
+        balance_header_rects.append((col_rect, key))
+        
+        display_h_text = h_text
+        if current_sort_column == key:
+            display_h_text += " ▼" if sort_ascending else " ▲"
+            
+        SCREEN.blit(FONT_BOLD.render(display_h_text, True, COLOR_ACCENT if current_sort_column == key else COLOR_TEXT), (table_rect.x + h_offset, hy))
+        
+    pygame.draw.line(SCREEN, COLOR_BORDER, (table_rect.x + 10, hy + 22), (table_rect.right - 10, hy + 22), 1)
+
+    # Sắp xếp danh sách thẻ theo cột đang chọn
+    sorted_cards = sorted(ALL_CARDS, key=lambda x: x.get(current_sort_column, 0) if current_sort_column in ['cost', 'ATK', 'DEF'] else str(x.get(current_sort_column, '')), reverse=not sort_ascending)
+
+    ty = hy + 32 - balance_scroll_offset
+    for idx, card in enumerate(sorted_cards):
+        row_y = ty + idx * 28
+        if table_rect.y + 25 < row_y < table_rect.bottom:
+            SCREEN.blit(FONT.render(card['name'][:30], True, COLOR_TEXT), (table_rect.x + 20, row_y))
+            SCREEN.blit(FONT.render(card.get('category', 'N/A')[:20], True, (200, 200, 200)), (table_rect.x + 300, row_y))
+            SCREEN.blit(FONT.render(str(card.get('cost', 0)), True, COLOR_TEXT), (table_rect.x + 480, row_y))
+            SCREEN.blit(FONT.render(str(card.get('ATK', 0)), True, COLOR_TEXT), (table_rect.x + 560, row_y))
+            SCREEN.blit(FONT.render(str(card.get('DEF', 0)), True, COLOR_TEXT), (table_rect.x + 640, row_y))
+
+    SCREEN.set_clip(None)
+    
+    pygame.draw.rect(SCREEN, COLOR_BORDER, table_rect, 1, border_radius=6)
+
+    note = FONT.render("Nhấn [ESC] về Menu.", True, (180, 180, 180))
+    SCREEN.blit(note, (panel.x + panel.width // 2 - note.get_width() // 2, panel.bottom - 30))
 
 def render_card_thumbnail(x, y, width, height, card, is_selected=False):
     rect = pygame.Rect(x, y, width, height)
@@ -200,20 +288,18 @@ def render_deck_builder():
     pygame.draw.rect(SCREEN, COLOR_BORDER, top_tools, 1, border_radius=4)
     SCREEN.blit(FONT_BOLD.render(f"Main Deck: {len(user_main_deck)}/40 | Extra Deck: {len(user_extra_deck)}/15 | Side Deck: {len(user_side_deck)}/15", True, COLOR_TEXT), (345, 32))
 
-    # --- MAIN DECK (Kích thước chứa vừa trọn 40 lá: 4 hàng x 10 cột) ---
+    # --- MAIN DECK ---
     main_deck_box = pygame.Rect(335, 68, 590, 315)
     pygame.draw.rect(SCREEN, (18, 18, 25), main_deck_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, main_deck_box, 1, border_radius=6)
     SCREEN.blit(FONT_BOLD.render("Main Deck (40 slots):", True, COLOR_ACCENT), (345, 74))
 
-    # Vẽ các ô slot trống & các lá bài trong Main Deck
     for idx in range(40):
         col = idx % 10
         row = idx // 10
         c_x = 343 + col * 57
         c_y = 96 + row * 72
         
-        # Vẽ ô slot mờ
         slot_rect = pygame.Rect(c_x, c_y, 48, 68)
         pygame.draw.rect(SCREEN, (30, 32, 42), slot_rect, border_radius=3)
         pygame.draw.rect(SCREEN, (50, 55, 70), slot_rect, 1, border_radius=3)
@@ -223,7 +309,7 @@ def render_deck_builder():
             main_deck_rects.append((slot_rect, idx))
             render_card_thumbnail(c_x, c_y, 48, 68, card)
 
-    # --- EXTRA DECK (Vừa đủ 15 lá: 2 hàng x 8 cột) ---
+    # --- EXTRA DECK ---
     extra_box = pygame.Rect(335, 390, 590, 140)
     pygame.draw.rect(SCREEN, COLOR_PANEL, extra_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, extra_box, 1, border_radius=6)
@@ -244,7 +330,7 @@ def render_deck_builder():
             extra_deck_rects.append((slot_rect, idx))
             render_card_thumbnail(c_x, c_y, 48, 52, card)
 
-    # --- SIDE DECK (Vừa đủ 15 lá: 2 hàng x 8 cột) ---
+    # --- SIDE DECK ---
     side_box = pygame.Rect(335, 538, 590, 140)
     pygame.draw.rect(SCREEN, COLOR_PANEL, side_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, side_box, 1, border_radius=6)
@@ -265,11 +351,12 @@ def render_deck_builder():
             side_deck_rects.append((slot_rect, idx))
             render_card_thumbnail(c_x, c_y, 48, 52, card)
 
-    # --- 3. KHUNG BÊN PHẢI: TÌM KIẾM & KẾT QUẢ ---
+    # --- 3. KHUNG BÊN PHẢI: TÌM KIẾM & DANH SÁCH THẺ CÓ CLIP ---
     right_panel = pygame.Rect(955, 15, 310, HEIGHT - 30)
     pygame.draw.rect(SCREEN, COLOR_PANEL, right_panel, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, right_panel, 1, border_radius=6)
 
+    # Ô tìm kiếm (Vẽ cố định phía trên)
     search_box_rect = pygame.Rect(970, 30, 280, 32)
     bg_search = (70, 20, 20) if search_active else (40, 40, 50)
     pygame.draw.rect(SCREEN, bg_search, search_box_rect, border_radius=4)
@@ -279,32 +366,33 @@ def render_deck_builder():
     txt_col = COLOR_TEXT if search_query else (150, 150, 150)
     SCREEN.blit(FONT.render(display_text, True, txt_col), (search_box_rect.x + 10, search_box_rect.y + 7))
 
-    if search_query.strip() != "":
-        filtered_cards = [c for c in ALL_CARDS if search_query.lower() in c['name'].lower()]
+    filtered_cards = [c for c in ALL_CARDS if not search_query.strip() or search_query.lower() in c.get('name', '').lower()]
 
-        results_header = pygame.Rect(970, 70, 280, 30)
-        pygame.draw.rect(SCREEN, (30, 10, 10), results_header, border_radius=4)
-        SCREEN.blit(FONT.render(f"Kết quả ({len(filtered_cards)}) - Kéo thả vào Deck", True, COLOR_ACCENT), (980, 76))
+    results_header = pygame.Rect(970, 70, 280, 30)
+    pygame.draw.rect(SCREEN, (30, 10, 10), results_header, border_radius=4)
+    SCREEN.blit(FONT.render(f"Kết quả ({len(filtered_cards)}) - Kéo thả vào Deck", True, COLOR_ACCENT), (980, 76))
 
-        ry = 110 - scroll_offset
-        for idx, card in enumerate(filtered_cards): 
-            if -60 < ry < HEIGHT:
-                item_rect = pygame.Rect(970, ry, 280, 52)
-                is_sel = (selected_card and selected_card['id'] == card['id'])
-                right_list_rects.append((item_rect, card))
-                
-                render_card_thumbnail(970, ry, 38, 52, card, is_selected=is_sel)
-                
-                name_surf = FONT_BOLD.render(card['name'][:24], True, COLOR_TEXT)
-                info_surf = FONT.render(f"ATK: {card.get('ATK', 0)} / DEF: {card.get('DEF', 0)}", True, (200, 200, 200))
-                SCREEN.blit(name_surf, (1018, ry + 6))
-                SCREEN.blit(info_surf, (1018, ry + 28))
-                
-            ry += 56
-    else:
-        hint_rect = pygame.Rect(970, 120, 280, 100)
-        SCREEN.blit(FONT.render("Vui lòng gõ tên thẻ bài vào ô", True, (180, 180, 180)), (hint_rect.x + 45, hint_rect.y + 20))
-        SCREEN.blit(FONT.render("trên để tìm kiếm.", True, (180, 180, 180)), (hint_rect.x + 75, hint_rect.y + 40))
+    # --- VÙNG HIỂN THỊ DANH SÁCH THẺ (CÓ CLIP KHÔNG BỊ TRÀN) ---
+    list_clip_rect = pygame.Rect(970, 105, 280, HEIGHT - 130)
+    SCREEN.set_clip(list_clip_rect)
+
+    ry = 110 - scroll_offset
+    for idx, card in enumerate(filtered_cards): 
+        if list_clip_rect.y - 60 < ry < list_clip_rect.bottom:
+            item_rect = pygame.Rect(970, ry, 280, 52)
+            is_sel = (selected_card and selected_card['id'] == card['id'])
+            right_list_rects.append((item_rect, card))
+            
+            render_card_thumbnail(970, ry, 38, 52, card, is_selected=is_sel)
+            
+            name_surf = FONT_BOLD.render(card['name'][:24], True, COLOR_TEXT)
+            info_surf = FONT.render(f"ATK: {card.get('ATK', 0)} / DEF: {card.get('DEF', 0)}", True, (200, 200, 200))
+            SCREEN.blit(name_surf, (1018, ry + 6))
+            SCREEN.blit(info_surf, (1018, ry + 28))
+            
+        ry += 56
+
+    SCREEN.set_clip(None)  # Hủy clip
 
     if dragging_card:
         m_pos = pygame.mouse.get_pos()
@@ -315,7 +403,7 @@ def render_battle_field():
     SCREEN.blit(FONT_TITLE.render("BATTLE MODE: Đang phát triển (Nhấn ESC về Menu)", True, COLOR_ACCENT), (WIDTH//2 - 300, HEIGHT//2))
 
 async def main():
-    global current_state, selected_card, user_main_deck, user_extra_deck, user_side_deck, search_query, search_active, dragging_card, scroll_offset
+    global current_state, selected_card, user_main_deck, user_extra_deck, user_side_deck, search_query, search_active, dragging_card, scroll_offset, balance_scroll_offset, current_sort_column, sort_ascending
     clock = pygame.time.Clock()
     running = True
 
@@ -326,21 +414,36 @@ async def main():
             
             if event.type == pygame.MOUSEWHEEL:
                 mouse_pos = pygame.mouse.get_pos()
-                if mouse_pos[0] > 955: 
+                if current_state == GameState.DECK_BUILDER and mouse_pos[0] > 955: 
                     scroll_offset -= event.y * 30
                     scroll_offset = max(0, scroll_offset)
+                elif current_state == GameState.BALANCE:
+                    balance_scroll_offset -= event.y * 25
+                    balance_scroll_offset = max(0, min(balance_scroll_offset, 250))
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = pygame.mouse.get_pos()
                 center_x, center_y = WIDTH // 2, HEIGHT // 2 - 20
                 
                 if current_state == GameState.MENU:
-                    if pygame.Rect(center_x - 130, center_y - 20, 260, 40).collidepoint(mouse_pos):
+                    if pygame.Rect(center_x - 130, center_y - 40, 260, 38).collidepoint(mouse_pos):
                         current_state = GameState.DECK_BUILDER
-                    elif pygame.Rect(center_x - 130, center_y + 30, 260, 40).collidepoint(mouse_pos):
+                    elif pygame.Rect(center_x - 130, center_y + 8, 260, 38).collidepoint(mouse_pos):
+                        current_state = GameState.BALANCE
+                    elif pygame.Rect(center_x - 130, center_y + 56, 260, 38).collidepoint(mouse_pos):
                         current_state = GameState.BATTLE
-                    elif pygame.Rect(center_x - 130, center_y + 80, 260, 40).collidepoint(mouse_pos):
+                    elif pygame.Rect(center_x - 130, center_y + 104, 260, 38).collidepoint(mouse_pos):
                         running = False
+                
+                elif current_state == GameState.BALANCE:
+                    # Kiểm tra click vào tiêu đề cột để sắp xếp
+                    for rect, key in balance_header_rects:
+                        if rect.collidepoint(mouse_pos):
+                            if current_sort_column == key:
+                                sort_ascending = not sort_ascending
+                            else:
+                                current_sort_column = key
+                                sort_ascending = True
                 
                 elif current_state == GameState.DECK_BUILDER:
                     search_box_rect = pygame.Rect(970, 30, 280, 32)
@@ -373,7 +476,7 @@ async def main():
                                 print(f"[DECK] Đã xóa '{removed['name']}' khỏi Side Deck.")
 
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-                if dragging_card:
+                if current_state == GameState.DECK_BUILDER and dragging_card:
                     mouse_pos = pygame.mouse.get_pos()
                     
                     main_deck_box = pygame.Rect(335, 68, 590, 315)
@@ -381,17 +484,35 @@ async def main():
                     side_box = pygame.Rect(335, 538, 590, 140)
 
                     if main_deck_box.collidepoint(mouse_pos):
-                        if len(user_main_deck) < 40:
-                            user_main_deck.append(dragging_card)
-                            print(f"[DECK] Đã thêm vào Main Deck: {dragging_card['name']}")
+                        success, message = deck_manager.add_card(dragging_card)
+                        if success:
+                            print(f"[DECK] {message}")
+                        else:
+                            print(f"[WARNING] {message}")
+                            
                     elif extra_box.collidepoint(mouse_pos):
                         if len(user_extra_deck) < 15:
-                            user_extra_deck.append(dragging_card)
-                            print(f"[DECK] Đã thêm vào Extra Deck: {dragging_card['name']}")
+                            # Đếm số lượng thẻ trùng id trong Extra Deck (giới hạn tối đa 3 con)
+                            same_card_count = sum(1 for c in user_extra_deck if c['id'] == dragging_card['id'])
+                            if same_card_count < 3:
+                                user_extra_deck.append(dragging_card)
+                                print(f"[DECK] Đã thêm vào Extra Deck: {dragging_card['name']}")
+                            else:
+                                print(f"[WARNING] Extra Deck đã đạt tối đa 3 bản sao của thẻ này!")
+                        else:
+                            print(f"[WARNING] Extra Deck đã đầy (tối đa 15 lá)!")
+                            
                     elif side_box.collidepoint(mouse_pos):
                         if len(user_side_deck) < 15:
-                            user_side_deck.append(dragging_card)
-                            print(f"[DECK] Đã thêm vào Side Deck: {dragging_card['name']}")
+                            # Đếm số lượng thẻ trùng id trong Side Deck (giới hạn tối đa 3 con)
+                            same_card_count = sum(1 for c in user_side_deck if c['id'] == dragging_card['id'])
+                            if same_card_count < 3:
+                                user_side_deck.append(dragging_card)
+                                print(f"[DECK] Đã thêm vào Side Deck: {dragging_card['name']}")
+                            else:
+                                print(f"[WARNING] Side Deck đã đạt tối đa 3 bản sao của thẻ này!")
+                        else:
+                            print(f"[WARNING] Side Deck đã đầy (tối đa 15 lá)!")
                             
                     dragging_card = None
 
@@ -413,6 +534,8 @@ async def main():
             render_menu()
         elif current_state == GameState.DECK_BUILDER:
             render_deck_builder()
+        elif current_state == GameState.BALANCE:
+            render_balance_table()
         elif current_state == GameState.BATTLE:
             render_battle_field()
 
