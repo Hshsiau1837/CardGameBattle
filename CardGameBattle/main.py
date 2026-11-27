@@ -9,7 +9,6 @@ from loader import CardLoader
 from ai_replay import ReplayRecorder
 from engine import GameEngine
 
-# Kiểm tra môi trường (Desktop hay WebAssembly/Pygbag)
 try:
     import js
     IS_WEB = True
@@ -17,27 +16,26 @@ except ImportError:
     js = None
     IS_WEB = False
 
-# Khởi tạo Pygame
 pygame.init()
 WIDTH, HEIGHT = 1280, 720
 SCREEN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("AlgoCards: EDOPro Deck Builder & Battle")
 
-# --- BẢNG MÀU & FONT CHUẨN ---
-COLOR_BG = (15, 15, 20)            
-COLOR_PANEL = (55, 12, 12)        
-COLOR_PANEL_HOVER = (85, 18, 18)  
-COLOR_BORDER = (200, 150, 50)     
-COLOR_TEXT = (245, 245, 245)      
-COLOR_ACCENT = (255, 215, 0)      
+COLOR_BG = (15, 15, 20)
+COLOR_PANEL = (55, 12, 12)
+COLOR_PANEL_HOVER = (85, 18, 18)
+COLOR_BORDER = (200, 150, 50)
+COLOR_TEXT = (245, 245, 245)
+COLOR_ACCENT = (255, 215, 0)
 
-COLOR_MONSTER = (200, 110, 40)    
-COLOR_SPELL = (30, 130, 70)       
-COLOR_TRAP = (160, 40, 130)       
+COLOR_MONSTER = (200, 110, 40)
+COLOR_SPELL = (30, 130, 70)
+COLOR_TRAP = (160, 40, 130)
 
 FONT = pygame.font.SysFont("Arial", 14)
 FONT_BOLD = pygame.font.SysFont("Arial", 16, bold=True)
 FONT_TITLE = pygame.font.SysFont("Arial", 20, bold=True)
+
 
 class GameState:
     LOGIN = "LOGIN"
@@ -45,9 +43,14 @@ class GameState:
     DECK_BUILDER = "DECK_BUILDER"
     BATTLE = "BATTLE"
 
+
 current_state = GameState.LOGIN
 
 ALL_CARDS = []
+card_by_id = {}
+filtered_cache_key = None
+filtered_cache_list = []
+
 user_main_deck = []
 user_extra_deck = []
 user_side_deck = []
@@ -55,6 +58,9 @@ unlocked_cards = []
 selected_card = None
 recorder = ReplayRecorder()
 image_cache = {}
+scaled_image_cache = {}
+text_cache = {}
+bg_surface = None
 
 API_BASE_URL = "http://127.0.0.1:8001"
 logged_username = ""
@@ -70,31 +76,109 @@ scroll_offset = 0
 
 game_engine = None
 battle_log = []
+_req_counter = 0
+
+btn_login_rect = None
+btn_register_rect = None
+right_list_rects = []
+main_deck_rects = []
+extra_deck_rects = []
+side_deck_rects = []
+btn_save_deck_rect = None
+btn_next_phase_rect = None
+
 
 def get_card_image(card):
-    if not card or not card.get('id'):
+    if not card or not card.get("id"):
         return None
-    card_id = str(card['id'])
+    card_id = str(card["id"])
     if card_id in image_cache:
         return image_cache[card_id]
     img_path = os.path.join("card_images", f"{card_id}.jpg")
     if os.path.exists(img_path):
         try:
-            img = pygame.image.load(img_path)
+            img = pygame.image.load(img_path).convert()
             image_cache[card_id] = img
             return img
         except Exception:
-            pass
+            try:
+                img = pygame.image.load(img_path)
+                image_cache[card_id] = img
+                return img
+            except Exception:
+                pass
+    image_cache[card_id] = None
     return None
 
-def draw_honeycomb_bg():
-    SCREEN.fill(COLOR_BG)
-    for x in range(0, WIDTH, 60):
-        pygame.draw.line(SCREEN, (22, 22, 30), (x, 0), (x, HEIGHT), 1)
-    for y in range(0, HEIGHT, 60):
-        pygame.draw.line(SCREEN, (22, 22, 30), (0, y), (WIDTH, y), 1)
 
-# --- XỬ LÝ API TƯƠNG THÍCH CẢ LOCAL & WEB ---
+def get_scaled_card_image(card, width, height):
+    if not card or not card.get("id"):
+        return None
+    card_id = str(card["id"])
+    w, h = int(width), int(height)
+    key = (card_id, w, h)
+    if key in scaled_image_cache:
+        return scaled_image_cache[key]
+    base_img = get_card_image(card)
+    if base_img is None:
+        return None
+    scaled = pygame.transform.smoothscale(base_img, (w, h))
+    if len(scaled_image_cache) > 512:
+        scaled_image_cache.clear()
+    scaled_image_cache[key] = scaled
+    return scaled
+
+
+def get_cached_text(text, font, color):
+    s = str(text)
+    key = (s, id(font), color)
+    surf = text_cache.get(key)
+    if surf is None:
+        surf = font.render(s, True, color)
+        if len(text_cache) > 1024:
+            text_cache.clear()
+        text_cache[key] = surf
+    return surf
+
+
+def draw_text(text, font, color, pos, center=False):
+    surf = get_cached_text(text, font, color)
+    rect = surf.get_rect(center=pos) if center else surf.get_rect(topleft=pos)
+    SCREEN.blit(surf, rect)
+    return rect
+
+
+def get_bg_surface():
+    global bg_surface
+    if bg_surface is None:
+        surf = pygame.Surface((WIDTH, HEIGHT))
+        surf.fill(COLOR_BG)
+        for x in range(0, WIDTH, 60):
+            pygame.draw.line(surf, (22, 22, 30), (x, 0), (x, HEIGHT), 1)
+        for y in range(0, HEIGHT, 60):
+            pygame.draw.line(surf, (22, 22, 30), (0, y), (WIDTH, y), 1)
+        bg_surface = surf
+    return bg_surface
+
+
+def draw_honeycomb_bg():
+    SCREEN.blit(get_bg_surface(), (0, 0))
+
+
+def get_filtered_cards(query):
+    global filtered_cache_key, filtered_cache_list
+    q = query.strip().lower()
+    if q == filtered_cache_key:
+        return filtered_cache_list
+    if not q:
+        filtered_cache_key = ""
+        filtered_cache_list = []
+        return filtered_cache_list
+    filtered_cache_key = q
+    filtered_cache_list = [c for c in ALL_CARDS if q in str(c.get("name", "")).lower()]
+    return filtered_cache_list
+
+
 async def api_auth(endpoint, username, password):
     global logged_username, user_main_deck, unlocked_cards, login_status_msg, current_state
     try:
@@ -107,11 +191,11 @@ async def api_auth(endpoint, username, password):
             logged_username = username
             unlocked_cards = data.get("unlocked_cards", [])
             saved_deck_ids = data.get("deck_data", [])
-            user_main_deck = [c for c in ALL_CARDS if c["id"] in saved_deck_ids]
+            user_main_deck = [card_by_id[cid] for cid in saved_deck_ids if cid in card_by_id]
             current_state = GameState.MENU
     except Exception as e:
-        print("API AUTH ERROR:", e)
         login_status_msg = f"{type(e).__name__}: {str(e)[:50]}"
+
 
 async def api_sync_progress():
     global logged_username, user_main_deck, unlocked_cards, login_status_msg
@@ -126,9 +210,8 @@ async def api_sync_progress():
         })
         login_status_msg = data.get("message", "Da luu deck thanh cong!")
     except Exception as e:
-        print("API SYNC ERROR:", e)
         login_status_msg = "Loi dong bo!"
-_req_counter = 0
+
 
 async def post_json(url, payload):
     global _req_counter
@@ -152,7 +235,7 @@ async def post_json(url, payload):
             done_val = js.window.eval(f"window.{req_id}.done")
             if bool(done_val):
                 break
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.01)
 
         err_val = js.window.eval(f"window.{req_id}.err")
         res_text = str(js.window.eval(f"window.{req_id}.text"))
@@ -171,68 +254,61 @@ async def post_json(url, payload):
         )
         with urllib.request.urlopen(req, timeout=5) as response:
             return json.loads(response.read().decode("utf-8"))
-# --- MÀN HÌNH ĐĂNG NHẬP ---
-btn_login_rect = None
-btn_register_rect = None
+
 
 def render_login_screen():
     draw_honeycomb_bg()
     global btn_login_rect, btn_register_rect
     center_x, center_y = WIDTH // 2, HEIGHT // 2
-    
+    mouse_pos = pygame.mouse.get_pos()
+
     panel = pygame.Rect(center_x - 190, center_y - 200, 380, 400)
     pygame.draw.rect(SCREEN, COLOR_PANEL, panel, border_radius=8)
     pygame.draw.rect(SCREEN, COLOR_BORDER, panel, 2, border_radius=8)
-    
-    title = FONT_TITLE.render("DANG NHAP & DANG KY", True, COLOR_ACCENT)
-    SCREEN.blit(title, (center_x - title.get_width() // 2, center_y - 175))
-    
-    SCREEN.blit(FONT_BOLD.render("Tai khoan:", True, COLOR_TEXT), (center_x - 150, center_y - 120))
+
+    draw_text("DANG NHAP & DANG KY", FONT_TITLE, COLOR_ACCENT, (center_x, center_y - 165), center=True)
+
+    draw_text("Tai khoan:", FONT_BOLD, COLOR_TEXT, (center_x - 150, center_y - 120))
     u_box = pygame.Rect(center_x - 150, center_y - 95, 300, 35)
     u_col = COLOR_ACCENT if active_input_field == "username" else COLOR_BORDER
     pygame.draw.rect(SCREEN, (30, 30, 40), u_box, border_radius=4)
     pygame.draw.rect(SCREEN, u_col, u_box, 1, border_radius=4)
-    SCREEN.blit(FONT.render(login_user_input, True, COLOR_TEXT), (u_box.x + 10, u_box.y + 8))
-    
-    SCREEN.blit(FONT_BOLD.render("Mat khau:", True, COLOR_TEXT), (center_x - 150, center_y - 50))
+    draw_text(login_user_input, FONT, COLOR_TEXT, (u_box.x + 10, u_box.y + 8))
+
+    draw_text("Mat khau:", FONT_BOLD, COLOR_TEXT, (center_x - 150, center_y - 50))
     p_box = pygame.Rect(center_x - 150, center_y - 25, 300, 35)
     p_col = COLOR_ACCENT if active_input_field == "password" else COLOR_BORDER
     pygame.draw.rect(SCREEN, (30, 30, 40), p_box, border_radius=4)
     pygame.draw.rect(SCREEN, p_col, p_box, 1, border_radius=4)
-    SCREEN.blit(FONT.render("*" * len(login_pass_input), True, COLOR_TEXT), (p_box.x + 10, p_box.y + 8))
-    
+    draw_text("*" * len(login_pass_input), FONT, COLOR_TEXT, (p_box.x + 10, p_box.y + 8))
+
     btn_login_rect = pygame.Rect(center_x - 150, center_y + 30, 300, 38)
-    is_l_hover = btn_login_rect.collidepoint(pygame.mouse.get_pos())
+    is_l_hover = btn_login_rect.collidepoint(mouse_pos)
     pygame.draw.rect(SCREEN, COLOR_PANEL_HOVER if is_l_hover else (30, 100, 50), btn_login_rect, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, btn_login_rect, 1, border_radius=6)
-    txt_l = FONT_BOLD.render("DANG NHAP", True, COLOR_TEXT)
-    SCREEN.blit(txt_l, (btn_login_rect.x + btn_login_rect.width // 2 - txt_l.get_width() // 2, btn_login_rect.y + 10))
+    draw_text("DANG NHAP", FONT_BOLD, COLOR_TEXT, btn_login_rect.center, center=True)
 
     btn_register_rect = pygame.Rect(center_x - 150, center_y + 80, 300, 38)
-    is_r_hover = btn_register_rect.collidepoint(pygame.mouse.get_pos())
+    is_r_hover = btn_register_rect.collidepoint(mouse_pos)
     pygame.draw.rect(SCREEN, COLOR_PANEL_HOVER if is_r_hover else (50, 70, 130), btn_register_rect, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, btn_register_rect, 1, border_radius=6)
-    txt_r = FONT_BOLD.render("DANG KY TAI KHOAN", True, COLOR_TEXT)
-    SCREEN.blit(txt_r, (btn_register_rect.x + btn_register_rect.width // 2 - txt_r.get_width() // 2, btn_register_rect.y + 10))
-    
-    if login_status_msg:
-        msg_surf = FONT.render(login_status_msg, True, COLOR_ACCENT)
-        SCREEN.blit(msg_surf, (center_x - msg_surf.get_width() // 2, center_y + 135))
+    draw_text("DANG KY TAI KHOAN", FONT_BOLD, COLOR_TEXT, btn_register_rect.center, center=True)
 
-# --- MENU CHÍNH ---
+    if login_status_msg:
+        draw_text(login_status_msg, FONT, COLOR_ACCENT, (center_x, center_y + 143), center=True)
+
+
 def render_menu():
     draw_honeycomb_bg()
     center_x, center_y = WIDTH // 2, HEIGHT // 2 - 20
-    
+    mouse_pos = pygame.mouse.get_pos()
+
     points = [(center_x, center_y - 120), (center_x - 140, center_y + 80), (center_x + 140, center_y + 80)]
     pygame.draw.polygon(SCREEN, (35, 10, 10), points)
     pygame.draw.polygon(SCREEN, COLOR_BORDER, points, 3)
 
-    title = FONT_TITLE.render("ALGO CARDS: DECK SYSTEM", True, COLOR_ACCENT)
-    SCREEN.blit(title, (center_x - title.get_width() // 2, center_y - 85))
-
-    user_info = FONT.render(f"Xin chao: {logged_username}", True, (180, 255, 180))
-    SCREEN.blit(user_info, (center_x - user_info.get_width() // 2, center_y - 50))
+    draw_text("ALGO CARDS: DECK SYSTEM", FONT_TITLE, COLOR_ACCENT, (center_x, center_y - 75), center=True)
+    draw_text(f"Xin chao: {logged_username}", FONT, (180, 255, 180), (center_x, center_y - 42), center=True)
 
     menu_items = [
         ("Xay dung Bo bai (Deck Builder)", GameState.DECK_BUILDER),
@@ -241,39 +317,31 @@ def render_menu():
     ]
 
     start_y = center_y - 20
-    for idx, (text, action) in enumerate(menu_items):
+    for idx, (text, _) in enumerate(menu_items):
         rect = pygame.Rect(center_x - 140, start_y + idx * 50, 280, 40)
-        is_hover = rect.collidepoint(pygame.mouse.get_pos())
+        is_hover = rect.collidepoint(mouse_pos)
         color = COLOR_PANEL_HOVER if is_hover else COLOR_PANEL
         pygame.draw.rect(SCREEN, color, rect, border_radius=6)
         pygame.draw.rect(SCREEN, COLOR_BORDER, rect, 1, border_radius=6)
-        txt_surf = FONT_BOLD.render(text, True, COLOR_TEXT)
-        SCREEN.blit(txt_surf, (rect.x + rect.width // 2 - txt_surf.get_width() // 2, rect.y + 10))
+        draw_text(text, FONT_BOLD, COLOR_TEXT, rect.center, center=True)
+
 
 def render_card_thumbnail(x, y, width, height, card, is_selected=False):
     rect = pygame.Rect(x, y, width, height)
-    card_img = get_card_image(card)
-    if card_img:
-        scaled_img = pygame.transform.scale(card_img, (width, height))
+    scaled_img = get_scaled_card_image(card, width, height)
+    if scaled_img:
         SCREEN.blit(scaled_img, (x, y))
     else:
-        ctype = card.get('type', 'Monster')
-        frame_color = COLOR_MONSTER if 'Monster' in ctype else (COLOR_TRAP if 'Trap' in ctype else COLOR_SPELL)
+        ctype = card.get("type", "Monster")
+        frame_color = COLOR_MONSTER if "Monster" in ctype else (COLOR_TRAP if "Trap" in ctype else COLOR_SPELL)
         pygame.draw.rect(SCREEN, (40, 40, 50), rect, border_radius=3)
         pygame.draw.rect(SCREEN, frame_color, rect, 1, border_radius=3)
-        name_surf = FONT.render(card['name'][:8], True, COLOR_TEXT)
-        SCREEN.blit(name_surf, (x + 2, y + 2))
+        draw_text(str(card.get("name", ""))[:8], FONT, COLOR_TEXT, (x + 2, y + 2))
 
     border_col = COLOR_ACCENT if is_selected else (100, 100, 100)
     pygame.draw.rect(SCREEN, border_col, rect, 1, border_radius=3)
 
-right_list_rects = []
-main_deck_rects = []
-extra_deck_rects = []
-side_deck_rects = []
-btn_save_deck_rect = None
 
-# --- DECK BUILDER ---
 def render_deck_builder():
     draw_honeycomb_bg()
     global right_list_rects, main_deck_rects, extra_deck_rects, side_deck_rects, btn_save_deck_rect
@@ -281,6 +349,7 @@ def render_deck_builder():
     main_deck_rects = []
     extra_deck_rects = []
     side_deck_rects = []
+    mouse_pos = pygame.mouse.get_pos()
 
     left_panel = pygame.Rect(15, 15, 290, HEIGHT - 30)
     pygame.draw.rect(SCREEN, COLOR_PANEL, left_panel, border_radius=6)
@@ -288,39 +357,36 @@ def render_deck_builder():
 
     if selected_card:
         card_art = pygame.Rect(35, 30, 250, 310)
-        card_img = get_card_image(selected_card)
-        if card_img:
-            scaled_img = pygame.transform.scale(card_img, (250, 310))
+        scaled_img = get_scaled_card_image(selected_card, 250, 310)
+        if scaled_img:
             SCREEN.blit(scaled_img, (35, 30))
         else:
             pygame.draw.rect(SCREEN, (30, 30, 40), card_art, border_radius=4)
         pygame.draw.rect(SCREEN, COLOR_ACCENT, card_art, 2, border_radius=4)
-        
-        c_name = FONT_BOLD.render(selected_card['name'][:24], True, COLOR_TEXT)
-        c_type = FONT.render(f"[{selected_card.get('type', 'Monster')}]", True, (255, 215, 0))
-        c_stats = FONT.render(f"ATK/ {selected_card.get('ATK', 0)}   DEF/ {selected_card.get('DEF', 0)}", True, COLOR_TEXT)
-        
-        SCREEN.blit(c_name, (35, 350))
-        SCREEN.blit(c_type, (35, 375))
-        SCREEN.blit(c_stats, (35, 398))
+
+        draw_text(str(selected_card.get("name", ""))[:24], FONT_BOLD, COLOR_TEXT, (35, 350))
+        draw_text(f"[{selected_card.get('type', 'Monster')}]", FONT, (255, 215, 0), (35, 375))
+        draw_text(f"ATK/ {selected_card.get('ATK', 0)}   DEF/ {selected_card.get('DEF', 0)}", FONT, COLOR_TEXT, (35, 398))
 
         desc_box = pygame.Rect(35, 425, 250, 260)
         pygame.draw.rect(SCREEN, (30, 10, 10), desc_box, border_radius=4)
         pygame.draw.rect(SCREEN, COLOR_BORDER, desc_box, 1, border_radius=4)
-        
-        desc_text = selected_card.get('effect', 'Khong co mo ta.')
-        words = desc_text.split(' ')
+
+        desc_text = str(selected_card.get("effect", "Khong co mo ta."))
+        words = desc_text.split(" ")
         line, line_y = "", 435
         for word in words:
             test_line = line + word + " "
             if FONT.size(test_line)[0] < 235:
                 line = test_line
             else:
-                SCREEN.blit(FONT.render(line, True, (220, 220, 220)), (42, line_y))
+                draw_text(line, FONT, (220, 220, 220), (42, line_y))
                 line = word + " "
                 line_y += 18
-                if line_y > 670: break
-        SCREEN.blit(FONT.render(line, True, (220, 220, 220)), (42, line_y))
+                if line_y > 670:
+                    break
+        if line_y <= 670 and line:
+            draw_text(line, FONT, (220, 220, 220), (42, line_y))
 
     center_panel = pygame.Rect(320, 15, 620, HEIGHT - 30)
     pygame.draw.rect(SCREEN, (25, 25, 35), center_panel, border_radius=6)
@@ -329,18 +395,18 @@ def render_deck_builder():
     top_tools = pygame.Rect(335, 25, 590, 35)
     pygame.draw.rect(SCREEN, COLOR_PANEL, top_tools, border_radius=4)
     pygame.draw.rect(SCREEN, COLOR_BORDER, top_tools, 1, border_radius=4)
-    SCREEN.blit(FONT_BOLD.render(f"Main: {len(user_main_deck)}/40 | [ESC] Menu", True, COLOR_TEXT), (345, 32))
+    draw_text(f"Main: {len(user_main_deck)}/40 | [ESC] Menu", FONT_BOLD, COLOR_TEXT, (345, 32))
 
     btn_save_deck_rect = pygame.Rect(790, 28, 120, 28)
-    is_save_hover = btn_save_deck_rect.collidepoint(pygame.mouse.get_pos())
+    is_save_hover = btn_save_deck_rect.collidepoint(mouse_pos)
     pygame.draw.rect(SCREEN, (40, 120, 60) if is_save_hover else (20, 80, 40), btn_save_deck_rect, border_radius=4)
     pygame.draw.rect(SCREEN, COLOR_ACCENT, btn_save_deck_rect, 1, border_radius=4)
-    SCREEN.blit(FONT_BOLD.render("LUU DECK", True, COLOR_TEXT), (825, 33))
+    draw_text("LUU DECK", FONT_BOLD, COLOR_TEXT, btn_save_deck_rect.center, center=True)
 
     main_deck_box = pygame.Rect(335, 68, 590, 315)
     pygame.draw.rect(SCREEN, (18, 18, 25), main_deck_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, main_deck_box, 1, border_radius=6)
-    SCREEN.blit(FONT_BOLD.render("Main Deck (40 slots):", True, COLOR_ACCENT), (345, 74))
+    draw_text("Main Deck (40 slots):", FONT_BOLD, COLOR_ACCENT, (345, 74))
 
     for idx in range(40):
         col = idx % 10
@@ -358,7 +424,7 @@ def render_deck_builder():
     extra_box = pygame.Rect(335, 390, 590, 140)
     pygame.draw.rect(SCREEN, COLOR_PANEL, extra_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, extra_box, 1, border_radius=6)
-    SCREEN.blit(FONT_BOLD.render("Extra Deck (15 slots):", True, COLOR_TEXT), (345, 396))
+    draw_text("Extra Deck (15 slots):", FONT_BOLD, COLOR_TEXT, (345, 396))
     for idx in range(15):
         col = idx % 8
         row = idx // 8
@@ -374,7 +440,7 @@ def render_deck_builder():
     side_box = pygame.Rect(335, 538, 590, 140)
     pygame.draw.rect(SCREEN, COLOR_PANEL, side_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, side_box, 1, border_radius=6)
-    SCREEN.blit(FONT_BOLD.render("Side Deck (15 slots):", True, COLOR_TEXT), (345, 544))
+    draw_text("Side Deck (15 slots):", FONT_BOLD, COLOR_TEXT, (345, 544))
     for idx in range(15):
         col = idx % 8
         row = idx // 8
@@ -397,37 +463,33 @@ def render_deck_builder():
     pygame.draw.rect(SCREEN, COLOR_ACCENT if search_active else COLOR_BORDER, search_box_rect, 1, border_radius=4)
     display_text = search_query if search_query else "Nhap ten card de tim..."
     txt_col = COLOR_TEXT if search_query else (150, 150, 150)
-    SCREEN.blit(FONT.render(display_text, True, txt_col), (search_box_rect.x + 10, search_box_rect.y + 7))
+    draw_text(display_text, FONT, txt_col, (search_box_rect.x + 10, search_box_rect.y + 7))
 
     if search_query.strip() != "":
-        filtered_cards = [c for c in ALL_CARDS if search_query.lower() in c['name'].lower()]
+        filtered_cards = get_filtered_cards(search_query)
         results_header = pygame.Rect(970, 70, 280, 30)
         pygame.draw.rect(SCREEN, (30, 10, 10), results_header, border_radius=4)
-        SCREEN.blit(FONT.render(f"Ket qua ({len(filtered_cards)}) - Keo tha vao Deck", True, COLOR_ACCENT), (980, 76))
+        draw_text(f"Ket qua ({len(filtered_cards)}) - Keo tha vao Deck", FONT, COLOR_ACCENT, (980, 76))
 
         ry = 110 - scroll_offset
-        for idx, card in enumerate(filtered_cards): 
+        for card in filtered_cards:
             if -60 < ry < HEIGHT:
                 item_rect = pygame.Rect(970, ry, 280, 52)
-                is_sel = (selected_card and selected_card['id'] == card['id'])
+                is_sel = bool(selected_card and selected_card.get("id") == card.get("id"))
                 right_list_rects.append((item_rect, card))
                 render_card_thumbnail(970, ry, 38, 52, card, is_selected=is_sel)
-                name_surf = FONT_BOLD.render(card['name'][:24], True, COLOR_TEXT)
-                info_surf = FONT.render(f"ATK: {card.get('ATK', 0)} / DEF: {card.get('DEF', 0)}", True, (200, 200, 200))
-                SCREEN.blit(name_surf, (1018, ry + 6))
-                SCREEN.blit(info_surf, (1018, ry + 28))
+                draw_text(str(card.get("name", ""))[:24], FONT_BOLD, COLOR_TEXT, (1018, ry + 6))
+                draw_text(f"ATK: {card.get('ATK', 0)} / DEF: {card.get('DEF', 0)}", FONT, (200, 200, 200), (1018, ry + 28))
             ry += 56
 
     if dragging_card:
-        m_pos = pygame.mouse.get_pos()
-        render_card_thumbnail(m_pos[0] - 20, m_pos[1] - 30, 40, 56, dragging_card, is_selected=True)
+        render_card_thumbnail(mouse_pos[0] - 20, mouse_pos[1] - 30, 40, 56, dragging_card, is_selected=True)
 
-btn_next_phase_rect = None
 
-# --- BÀN ĐẤU (BATTLE) ---
 def render_battle_field():
     draw_honeycomb_bg()
     global game_engine, battle_log, btn_next_phase_rect
+    mouse_pos = pygame.mouse.get_pos()
 
     if not game_engine:
         sample_p1 = user_main_deck if len(user_main_deck) >= 5 else [
@@ -442,26 +504,23 @@ def render_battle_field():
 
     pygame.draw.rect(SCREEN, (160, 20, 20), pygame.Rect(330, 15, 260, 35), border_radius=4)
     pygame.draw.rect(SCREEN, (20, 120, 40), pygame.Rect(690, 15, 260, 35), border_radius=4)
-    
-    p2_info = FONT_BOLD.render(f"{game_engine.player2.username} | LP: {game_engine.player2.hp}", True, COLOR_TEXT)
-    p1_info = FONT_BOLD.render(f"{game_engine.player1.username} | LP: {game_engine.player1.hp}", True, COLOR_TEXT)
-    SCREEN.blit(p2_info, (340, 23))
-    SCREEN.blit(p1_info, (700, 23))
+
+    draw_text(f"{game_engine.player2.username} | LP: {game_engine.player2.hp}", FONT_BOLD, COLOR_TEXT, (340, 23))
+    draw_text(f"{game_engine.player1.username} | LP: {game_engine.player1.hp}", FONT_BOLD, COLOR_TEXT, (700, 23))
 
     mat_rect = pygame.Rect(330, 60, 620, 440)
     pygame.draw.rect(SCREEN, (18, 18, 26), mat_rect, border_radius=8)
     pygame.draw.rect(SCREEN, COLOR_BORDER, mat_rect, 2, border_radius=8)
 
-    phase_txt = FONT_TITLE.render(f"LUOT {game_engine.turn_count}: {game_engine.current_phase}", True, COLOR_ACCENT)
-    SCREEN.blit(phase_txt, (WIDTH // 2 - phase_txt.get_width() // 2, 75))
+    draw_text(f"LUOT {game_engine.turn_count}: {game_engine.current_phase}", FONT_TITLE, COLOR_ACCENT, (WIDTH // 2, 88), center=True)
 
     btn_next_phase_rect = pygame.Rect(WIDTH // 2 - 80, 115, 160, 32)
-    is_ph_hover = btn_next_phase_rect.collidepoint(pygame.mouse.get_pos())
+    is_ph_hover = btn_next_phase_rect.collidepoint(mouse_pos)
     pygame.draw.rect(SCREEN, COLOR_PANEL_HOVER if is_ph_hover else COLOR_PANEL, btn_next_phase_rect, border_radius=4)
     pygame.draw.rect(SCREEN, COLOR_BORDER, btn_next_phase_rect, 1, border_radius=4)
-    SCREEN.blit(FONT_BOLD.render("CHUYEN PHASE", True, COLOR_TEXT), (WIDTH // 2 - 50, 122))
+    draw_text("CHUYEN PHASE", FONT_BOLD, COLOR_TEXT, btn_next_phase_rect.center, center=True)
 
-    SCREEN.blit(FONT_BOLD.render(f"Tay bai Player (Mana: {game_engine.player1.mana}/{game_engine.player1.max_mana}):", True, COLOR_TEXT), (345, 370))
+    draw_text(f"Tay bai Player (Mana: {game_engine.player1.mana}/{game_engine.player1.max_mana}):", FONT_BOLD, COLOR_TEXT, (345, 370))
     for idx, card in enumerate(game_engine.player1.hand):
         hx = 345 + idx * 75
         hy = 395
@@ -470,27 +529,28 @@ def render_battle_field():
     log_box = pygame.Rect(960, 60, 305, 440)
     pygame.draw.rect(SCREEN, COLOR_PANEL, log_box, border_radius=6)
     pygame.draw.rect(SCREEN, COLOR_BORDER, log_box, 1, border_radius=6)
-    SCREEN.blit(FONT_BOLD.render("Nhat ky tran dau (Replay):", True, COLOR_ACCENT), (970, 70))
-    
+    draw_text("Nhat ky tran dau (Replay):", FONT_BOLD, COLOR_ACCENT, (970, 70))
+
     ly = 100
     for entry in battle_log[-18:]:
-        SCREEN.blit(FONT.render(entry[:45], True, COLOR_TEXT), (970, ly))
+        draw_text(str(entry)[:45], FONT, COLOR_TEXT, (970, ly))
         ly += 20
 
-    SCREEN.blit(FONT.render("Nhan [ESC] de quay ve Menu", True, (180, 180, 180)), (WIDTH // 2 - 80, HEIGHT - 30))
+    draw_text("Nhan [ESC] de quay ve Menu", FONT, (180, 180, 180), (WIDTH // 2, HEIGHT - 22), center=True)
 
-# --- VÒNG LẶP ASYNC CHÍNH ---
+
 async def main():
-    global current_state, ALL_CARDS, selected_card, user_main_deck, user_extra_deck, user_side_deck
+    global current_state, ALL_CARDS, card_by_id, selected_card, user_main_deck, user_extra_deck, user_side_deck
     global search_query, search_active, dragging_card, scroll_offset
     global login_user_input, login_pass_input, active_input_field, game_engine, battle_log
 
     card_loader = CardLoader()
     try:
         ALL_CARDS = card_loader.load_and_validate()
-    except Exception as e:
+    except Exception:
         ALL_CARDS = []
-        
+
+    card_by_id = {c["id"]: c for c in ALL_CARDS if isinstance(c, dict) and "id" in c}
     if ALL_CARDS and not selected_card:
         selected_card = ALL_CARDS[0]
 
@@ -504,7 +564,7 @@ async def main():
 
             if event.type == pygame.MOUSEWHEEL:
                 mouse_pos = pygame.mouse.get_pos()
-                if mouse_pos[0] > 955: 
+                if mouse_pos[0] > 955:
                     scroll_offset -= event.y * 30
                     scroll_offset = max(0, scroll_offset)
 
@@ -528,12 +588,13 @@ async def main():
                             await api_auth("/api/register", login_user_input, login_pass_input)
 
                 elif current_state == GameState.MENU:
-                    if pygame.Rect(center_x - 140, center_y - 20, 280, 40).collidepoint(mouse_pos):
+                    menu_cy = HEIGHT // 2 - 20
+                    if pygame.Rect(center_x - 140, menu_cy - 20, 280, 40).collidepoint(mouse_pos):
                         current_state = GameState.DECK_BUILDER
-                    elif pygame.Rect(center_x - 140, center_y + 30, 280, 40).collidepoint(mouse_pos):
+                    elif pygame.Rect(center_x - 140, menu_cy + 30, 280, 40).collidepoint(mouse_pos):
                         game_engine = None
                         current_state = GameState.BATTLE
-                    elif pygame.Rect(center_x - 140, center_y + 80, 280, 40).collidepoint(mouse_pos):
+                    elif pygame.Rect(center_x - 140, menu_cy + 80, 280, 40).collidepoint(mouse_pos):
                         current_state = GameState.LOGIN
 
                 elif current_state == GameState.DECK_BUILDER:
@@ -611,6 +672,7 @@ async def main():
 
     pygame.quit()
     sys.exit()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
