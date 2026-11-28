@@ -1,0 +1,222 @@
+[
+  {
+    "id": "31755044",
+    "name": "Zoodiac Whiptail",
+    "category": "Beast-Warrior",
+    "type": "Effect Monster",
+    "cost": 4,
+    "ATK": 1200,
+    "DEF": 400,
+    "effect": "(Quick Effect): You can target 1 Beast-Warrior Xyz Monster you control; attach this card from your hand or field to it as material. An Xyz Monster whose original Type is Beast-Warrior and has this card as material gains this effect: - If this card battles an opponent's monster, after damage calculation: Banish that opponent's monster.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/31755044.jpg"
+  },
+  {
+    "id": "95911373",
+    "name": "Zoroa, the Magistus Conflagrant Calamity",
+    "category": "Spellcaster",
+    "type": "Synchro Monster",
+    "cost": 8,
+    "ATK": 2900,
+    "DEF": 1500,
+    "effect": "1 Spellcaster Tuner + 1+ non-Tuner monsters. If this card is Synchro Summoned: You can equip 1 Magistus monster from your Extra Deck to this card. Your opponent cannot activate the effects of monsters with the same card type (Fusion, Synchro, Xyz, or Link) as a Magistus Monster Card in your Spell & Trap Zone. If this card is in your GY: You can target 1 Magistus card you control; destroy it, and if you do, Special Summon this card. You can only use this effect of Zoroa, the Magistus Conflagrant Calamity once per turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/95911373.jpg"
+  },
+  {
+    "id": "90861137",
+    "name": "Infernoble Arms - Joyeuse",
+    "category": "Equip",
+    "type": "Spell Card",
+    "cost": 4,
+    "ATK": 0,
+    "DEF": 0,
+    "effect": "While this card is equipped to a monster: You can target 1 FIRE Warrior monster in your GY; add it to your hand, then destroy this card. If this card is sent to the GY because the equipped monster is sent to the GY: You can Special Summon 1 FIRE Warrior monster from your hand. You can only use 1 Infernoble Arms - Joyeuse effect per turn, and only once that turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/90861137.jpg"
+  },
+  {
+    "id": "72978038",
+    "name": "Raise Moon the City that Never Sleeps",
+    "category": "Continuous",
+    "type": "Spell Card",
+    "cost": 4,
+    "ATK": 0,
+    "DEF": 0,
+    "effect": "The first time each Level 7 Raise Moon monster you control would be destroyed by card effect each turn, it is not destroyed. Once per turn, during the End Phase: Shuffle all Raise Moon cards in your GY and banishment into the Deck. Once per turn: You can activate 1 of these effects: - Place 1 card from your hand on the top or bottom of the Deck, then draw 1 card. - If you control a Spellcaster Raise Moon Xyz Monster: You can draw 1 card.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/72978038.jpg"
+  },
+  {
+    "id": "44256816",
+    "name": "1st Movement Solo",
+    "category": "Normal",
+    "type": "Spell Card",
+    "cost": 4,
+    "ATK": 0,
+    "DEF": 0,
+    "effect": "If you control no monsters: Special Summon 1 Level 4 or lower Melodious monster from your hand or Deck. You can only activate 1 1st Movement Solo per turn. You cannot Special Summon monsters during the turn you activate this card, except Melodious monsters.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/44256816.jpg"
+  },
+  {
+    "id": "86988864",
+    "name": "3-Hump Lacooda",
+    "category": "Beast",
+    "type": "Effect Monster",
+    "cost": 3,
+    "ATK": 500,
+    "DEF": 1500,
+    "effect": "If there are 3 face-up 3-Hump Lacooda cards on your side of the field, Tribute 2 of them to draw 3 cards.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/86988864.jpg"
+  },
+  {
+    "id": "11714098",
+    "name": "30,000-Year White Turtle",
+    "category": "Aqua",
+    "type": "Normal Monster",
+    "cost": 5,
+    "ATK": 1250,
+    "DEF": 2100,
+    "effect": "A huge turtle that has existed for over 30,000 years.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/11714098.jpg"
+  },
+  {
+    "id": "51865604",
+    "name": "ZS - Vanish Sage",
+    "category": "Warrior",
+    "type": "Effect Monster",
+    "cost": 1,
+    "ATK": 500,
+    "DEF": 100,
+    "effect": "If you control a Utopia monster: You can draw 1 card. If a monster(s) you control is banished during the Battle Phase (except during the Damage Step): You can banish this card from the field, then target 1 of those banished monsters; Special Summon that target, and if you do, banish 1 monster your opponent controls that has 3000 or less ATK. You can only use 1 ZS - Vanish Sage effect per turn, and only once that turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/51865604.jpg"
+  },
+  {
+    "id": "57036718",
+    "name": "Zubaba Buster",
+    "category": "Warrior",
+    "type": "Effect Monster",
+    "cost": 3,
+    "ATK": 1800,
+    "DEF": 600,
+    "effect": "If this card inflicts battle damage to your opponent, at the end of that Damage Step: Destroy the 1 face-up monster on the field that has the lowest ATK (your choice, if tied), and if you do, this card loses 800 ATK.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/57036718.jpg"
+  },
+  {
+    "id": "31563350",
+    "name": "Zubaba General",
+    "category": "Warrior",
+    "type": "XYZ Monster",
+    "cost": 4,
+    "ATK": 2000,
+    "DEF": 1000,
+    "effect": "2 Level 4 monsters. Once per turn: You can detach 1 Xyz Material from this card; equip 1 Warrior-Type monster from your hand to this card. This card gains ATK equal to the combined ATK of the monsters equipped to it by this effect.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/31563350.jpg"
+  },
+  {
+    "id": "97896503",
+    "name": "Zubaba Knight",
+    "category": "Warrior",
+    "type": "Effect Monster",
+    "cost": 3,
+    "ATK": 1600,
+    "DEF": 900,
+    "effect": "At the start of the Damage Step, if this card attacks a face-up Defense Position monster: Destroy that monster.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/97896503.jpg"
+  },
+  {
+    "id": "62006866",
+    "name": "Zubababa Knight",
+    "category": "Warrior",
+    "type": "Effect Monster",
+    "cost": 3,
+    "ATK": 1600,
+    "DEF": 900,
+    "effect": "If this card is Normal or Special Summoned: You can activate 1 of these effects: - Add 1 Zubaba monster from your Deck to your hand, except Zubababa Knight. This card's Level becomes that added monster's Level. - Destroy 1 Level 4 or lower Defense Position monster your opponent controls. If this card is detached from an Xyz Monster to activate that monster's effect: You can add 1 Gagaga monster from your Deck to your hand. You can only use each effect of Zubababa Knight once per turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/62006866.jpg"
+  },
+  {
+    "id": "23720856",
+    "name": "Zubababancho Gagagacoat",
+    "category": "Warrior",
+    "type": "Effect Monster",
+    "cost": 4,
+    "ATK": 1800,
+    "DEF": 100,
+    "effect": "If you control a Zubaba or Gagaga monster except Zubababancho Gagagacoat, while this card is in your hand: You can Special Summon this card. You can target 1 Gogogo or Dododo monster in your GY; Special Summon it, also you cannot Special Summon monsters from the Extra Deck for the rest of this turn, except Xyz Monsters. You can only use each effect of Zubababancho Gagagacoat once per turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/23720856.jpg"
+  },
+  {
+    "id": "29353756",
+    "name": "ZW - Eagle Claw",
+    "category": "Winged Beast",
+    "type": "Effect Monster",
+    "cost": 5,
+    "ATK": 2000,
+    "DEF": 1200,
+    "effect": "If your opponent's Life Points are at least 2000 higher than yours, you can Special Summon this card (from your hand). You can target 1 Utopia monster you control; equip this monster on the field to that target. It gains 2000 ATK. Once per turn, while this card is equipped to a monster, when a Trap Card or Trap effect that was activated on your opponent's side of the field resolves, negate the effects of that card. You can only control 1 ZW - Eagle Claw.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/29353756.jpg"
+  },
+  {
+    "id": "60992364",
+    "name": "ZW - Leo Arms",
+    "category": "Beast",
+    "type": "XYZ Monster",
+    "cost": 5,
+    "ATK": 3000,
+    "DEF": 1200,
+    "effect": "2 Level 5 monsters. This card cannot attack your opponent directly. Once per turn: You can detach 1 Xyz Material from this card; add 1 ZW - monster from your Deck to your hand. You can target 1 Utopia monster you control; equip this monster on the field to that target. It gains 3000 ATK. During your Battle Phase, if a monster attacked this turn while equipped with this card: You can send this Equip Card to the Graveyard; the monster that was equipped with this card can make a second attack, on an opponent's monster, during this Battle Phase.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/60992364.jpg"
+  },
+  {
+    "id": "42201897",
+    "name": "Azamina Determination",
+    "category": "Normal",
+    "type": "Trap Card",
+    "cost": 4,
+    "ATK": 0,
+    "DEF": 0,
+    "effect": "Reveal 1 Azamina Fusion Monster in your Extra Deck, and for every 4 Levels it has (round down), shuffle 1 Sinful Spoils card from your GY and/or banishment into the Deck, then Special Summon the revealed monster. (This is treated as a Fusion Summon.) You can banish this card from your GY, then target 1 Sinful Spoils Spell/Trap in your GY; Set it, but it cannot be activated this turn. You can only use 1 Azamina Determination effect per turn, and only once that turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/42201897.jpg"
+  },
+  {
+    "id": "46396218",
+    "name": "Azamina Ilia Silvia",
+    "category": "Illusion",
+    "type": "Fusion Monster",
+    "cost": 6,
+    "ATK": 1900,
+    "DEF": 1500,
+    "effect": "1 Illusion monster + 1 LIGHT Spellcaster monster. Any battle damage your Azamina monsters, except Azamina Ilia Silvia, inflicts to your opponent is doubled. You can only use each of the following effects of Azamina Ilia Silvia once per turn. When your opponent activates a card or effect (Quick Effect): You can Tribute this card; negate that effect. If this card is destroyed by battle or card effect: You can add 1 Sinful Spoils Trap from your Deck to your hand.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/46396218.jpg"
+  },
+  {
+    "id": "46174776",
+    "name": "Azamina Moa Regina",
+    "category": "Illusion",
+    "type": "Fusion Monster",
+    "cost": 8,
+    "ATK": 3000,
+    "DEF": 2000,
+    "effect": "1 Illusion monster + 1 Level 6 or higher Fiend monster. You can target 1 Illusion monster in your GY, except Azamina Moa Regina; Special Summon it. When an Azamina or Sinful Spoils card or effect is activated, except Azamina Moa Regina (Quick Effect): You can target up to 2 cards on the field; destroy them. You can only use each effect of Azamina Moa Regina once per turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/46174776.jpg"
+  },
+  {
+    "id": "73391962",
+    "name": "Azamina Mu Rcielago",
+    "category": "Illusion",
+    "type": "Fusion Monster",
+    "cost": 6,
+    "ATK": 2000,
+    "DEF": 2400,
+    "effect": "1 Illusion monster + 1 LIGHT Spellcaster monster. Monsters your opponent controls lose 500 ATK/DEF for each Azamina monster you control. You can only use each of the following effects of Azamina Mu Rcielago once per turn. If this card is Fusion Summoned: You can add 1 Azamina or Sinful Spoils card from your Deck to your hand. If this card is destroyed by battle or card effect: You can add 1 Sinful Spoils Spell from your Deck to your hand.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/73391962.jpg"
+  },
+  {
+    "id": "9785661",
+    "name": "Azamina Sol Erysichthon",
+    "category": "Illusion",
+    "type": "Fusion Monster",
+    "cost": 6,
+    "ATK": 2700,
+    "DEF": 0,
+    "effect": "1 Illusion monster + 1 Fiend monster. If this card is Fusion Summoned: You can target 1 card on the field; send it to the GY. During the Standby Phase: You can target 1 Azamina or Sinful Spoils card in your GY; add it to your hand. You can only use each effect of Azamina Sol Erysichthon once per turn.",
+    "image_url": "https://images.ygoprodeck.com/images/cards_small/9785661.jpg"
+  }
+]
